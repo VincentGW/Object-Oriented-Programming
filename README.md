@@ -12,4 +12,4 @@ TimeWallpaper automatically changes your desktop wallpaper based on real astrono
 
 # Treasure Hunt Simulator
 
-A fun game involving tiles and coordinates where a traveler searches for lost artifacts. Think Wind Waker meets Microsoft Excel but it's 1990.
+A fun game involving tiles and coordinates where a traveler searches for lost artifacts.

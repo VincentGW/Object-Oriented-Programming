@@ -1,85 +1,44 @@
+import select
 from Functions import *
 
-#Main running functionality
+#Initializations
 running = True
-bazarmode = False
-menu_cursor = None
-invtoggle = None
-Hermanostoggle = None
-landwalk = False
-Nether = False
-questkeys = [0]
-m = None
-yn = None
-quest = 0
-counter = 0
-metamap = Metamap().metagrid
-nether_metamap = NetherMetamap().metagrid
-overworld_atlas = Atlas(metamap)
-underworld_atlas = Atlas(nether_metamap)
-current_map = metamap[meta_x][meta_y]
-current_nethmap = nether_metamap[meta_x][meta_y]
-current_map_grid = current_map.grid
-current_nethmap_grid = current_nethmap.grid
+menu_option = None; invtoggle = None; storemode = False; nether = False; catch = False
+xbeforemove = 0; ybeforemove = 0
+metaxbeforemove = 0; metaybeforemove = 0
+metamap = Metamap().metagrid; overworld_atlas = Atlas(metamap)
+nether_metamap = NetherMetamap().metagrid; underworld_atlas = Atlas(nether_metamap)
+current_map = metamap[meta_x][meta_y]; current_map_grid = current_map.grid
+current_nethmap = nether_metamap[meta_x][meta_y]; current_nethmap_grid = current_nethmap.grid
 selected_tile = current_map_grid[x][y]
 pg.key.set_repeat(440,220)
 
-while running:
-    xbeforemove = x
-    ybeforemove = y
-    metaxbeforemove = meta_x
-    metaybeforemove = meta_y
+#Main running functionality
+while running: #move_handler(), menu_handler(), quest_handler(), boundary_checker()
+    xbeforemove, ybeforemove, metaxbeforemove, metaybeforemove = move_handler(x, y, meta_x, meta_y, xbeforemove, ybeforemove, metaxbeforemove, metaybeforemove)
     if menumode == True:
-        m = menu()
-        if m == 'y':
-            yn = m
-        elif m == 'n':
-            yn = m
-        elif m == False:
-            menumode = False
-            bazarmode = False
-            invtoggle = False
-            atlastoggle = False
-            spacetoggle = False
-            yn = None
-            m = None
-            counter = 0
-            if inventory["Fishing Pole"] == 1 and quest == 0:
-                quest = 1
-                inventory["Gold"] = inventory["Gold"] - 100
-            if inventory["Potion Effects"] == "Active" and quest == 5:
-                quest = 6
-                inventory["Gold"] = inventory["Gold"] - 100
-                inventory["Coral"] = inventory["Coral"] - 10
-                landwalk = True
-            if selected_tile.hermanos == True:
-                if questkeys[0] < 5:
-                    quest = quest + 1
-                selected_tile.hermanos = False
+        if (menu_result := menu_handler()) == 'Exit':
+            running = False
+        elif menu_result == 'y':
+            menu_option = 'y'
+        elif menu_result == 'n':
+            menu_option = 'n'
+        elif menu_result == False:
+            menumode = False; menu_result = None; storemode = False; invtoggle = False; atlastoggle = False; spacetoggle = False; menu_option = None; catch = False
+            inventory, quest, selected_tile, landwalk = quest_handler(inventory, quest, selected_tile, landwalk)
+            #if inventory["Potion"] == "Active":
+            #    landwalk = True
 
     else:
-        keys = key_parser(x,y)
-        x = keys[0]
-        y = keys[1]
-        running = keys[2]
-        invtoggle = keys[3]
-        spacetoggle = keys[4]
-        atlastoggle = keys[5]
-        move_bool = keys[6]
+        x, y, running, invtoggle, spacetoggle, atlastoggle, move_bool = key_parser(x, y, quest, selected_tile)
         
     try:
-        bound = boundary_checker(x, y, xbeforemove, ybeforemove, meta_x, meta_y, metaxbeforemove, metaybeforemove, metamap, landwalk)
-        x = bound[0]
-        y = bound[1]
-        meta_x = bound[2]
-        meta_y = bound[3]
+        x, y, meta_x, meta_y = boundary_checker(x, y, xbeforemove, ybeforemove, meta_x, meta_y, metaxbeforemove, metaybeforemove, metamap, landwalk)
     except:
-        x = xbeforemove
-        y = ybeforemove
-        meta_y = metaybeforemove
-        meta_x = metaxbeforemove
+        x = xbeforemove; meta_x = metaxbeforemove
+        y = ybeforemove; meta_y = metaybeforemove
 
-    if Nether == True:
+    if nether == True:
         current_nethmap = nether_metamap[meta_x][meta_y]
         current_nethmap_grid = current_nethmap.grid
         selected_tile = current_nethmap_grid[x][y]
@@ -88,19 +47,19 @@ while running:
         current_map_grid = current_map.grid
         selected_tile = current_map_grid[x][y]
 
-    if selected_tile.bazar == True:
+    if selected_tile.store == True:
         if landwalk == True:
             None
         else:    
             x = xbeforemove
             y = ybeforemove
-            bazarmode = True
+            storemode = True
             menumode = True
 
     if landwalk == False:
-        if selected_tile.ttype == 'Water':
+        if selected_tile.tile_type == 'Water':
             None
-        elif not selected_tile.ttype == 'Water':
+        elif not selected_tile.tile_type == 'Water':
             x = xbeforemove
             y = ybeforemove
     elif landwalk == True:
@@ -109,11 +68,13 @@ while running:
             landwalk = False
         
     if selected_tile.coin == True:
-        selected_tile.coin = False
         inventory["Gold"] = inventory["Gold"] + 10
+        play_gold()
+        selected_tile.coin = False
     
+    Screen.fill(black)
     Display.fill(black)
-    if Nether == True:
+    if nether == True:
         mapdraw(current_nethmap_grid)
     else:
         mapdraw(current_map_grid)
@@ -121,39 +82,42 @@ while running:
     coords = [x,y]
     metacoords = [meta_x, meta_y]
     Draw_Cursor(coords, scale)
-    coords_text = coords_font.render('coords: ' + str(coords), True, white); coords_textRect = coords_text.get_rect(); coords_textRect.center = (x_resolution - 755, y_resolution - 7)
-    Display.blit(coords_text, coords_textRect)
+    below_y = display_offset[1] + y_resolution + 10
+    coords_text = coords_font.render('coords: ' + str(coords), True, white); coords_textRect = coords_text.get_rect(); coords_textRect.midleft = (display_offset[0], below_y)
+    Screen.blit(coords_text, coords_textRect)
     if landwalk == True:
-        potion_text = coords_font.render('You have ' + str(4000 - land_tally) + ' steps before potion effects end', True, white); potion_textRect = potion_text.get_rect(); potion_textRect.center = (x_resolution - scale*2, y_resolution - 7)
-        Display.blit(potion_text, potion_textRect)
+        p_left = coords_font.render('You have ', True, white)
+        p_num  = coords_font.render(str(4000 - land_tally), True, white)
+        p_right = coords_font.render(' steps before potion effects end', True, white)
+        num_max_w = coords_font.size('4000')[0]
+        mid_x = screen_w // 2
+        num_right_x = mid_x + num_max_w // 2
+        Screen.blit(p_left,  p_left.get_rect(midright=(num_right_x - num_max_w, below_y)))
+        Screen.blit(p_num,   p_num.get_rect(midright=(num_right_x, below_y)))
+        Screen.blit(p_right, p_right.get_rect(midleft=(num_right_x, below_y)))
     if invtoggle == True:
-        menumode = True
-        display_inventory(inventory)
-    if bazarmode == True:
-        bazar(yn, quest)
+        menumode = True; display_inventory(inventory)
+    if storemode == True:
+        store(menu_option, quest)
     if spacetoggle == True:
-        if not selected_tile.hermanos == True:
-            menumode = True
-            spacebar_text = space(selected_tile, counter)
-            space_text = coords_font.render(f'{spacebar_text[0]}', True, white); space_textRect = space_text.get_rect(); space_textRect.center = (x_resolution/2, y_resolution - y_resolution/24)
+        menumode = True
+        if not selected_tile.shadow == True:
+            spacebar_text, catch = spacebar_handler(selected_tile, catch, landwalk)
+            space_text = coords_font.render(f'{spacebar_text}', True, white); space_textRect = space_text.get_rect(); space_textRect.center = (x_resolution/2, y_resolution - y_resolution/24)
             Display.blit(space_text, space_textRect)
-            counter = spacebar_text[1]
         else:
-            menumode = True
-            questkeys = hermanos(quest, hasatlas)
-            quest = questkeys[0]
-            hasatlas = questkeys[1]
+            shadow(quest)
     if atlastoggle == True:
-        if hasatlas == True:
+        if state['hasatlas'] == True:
             menumode = True
-            blnk = blink()
-            if Nether == False:
-                overworld_atlas.draw_atlas(coords, metacoords, blnk, Nether)
+            blinking = blink()
+            if nether == False:
+                overworld_atlas.draw_atlas(coords, metacoords, blinking)
             else:
-                underworld_atlas.draw_atlas(coords, metacoords, blnk, Nether)
+                underworld_atlas.draw_atlas(coords, metacoords, blinking)
     
-    if selected_tile.hole == True and keys[4] == True:
-        Nether = True
+    if selected_tile.hole == True and spacetoggle == True:
+        nether = True
         spacetoggle = False
         menumode = False
         landwalk = False
@@ -162,4 +126,4 @@ while running:
         Credits()
         menumode = True
         
-    pg.display.update()
+    flip()

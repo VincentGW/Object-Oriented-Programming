@@ -63,6 +63,8 @@ private:
     sf::Texture watermarkTexture;
     bool hasWatermark;
     time_t lastAccentColorUpdate;
+    sf::Shader watermarkShader;
+    bool watermarkShaderLoaded;
 
     struct ColorPoint {
         double hour;
@@ -95,7 +97,7 @@ private:
     }
 
 public:
-    TimeWallpaper() : hasWatermark(false), lastAccentColorUpdate(0) {
+    TimeWallpaper() : hasWatermark(false), lastAccentColorUpdate(0), watermarkShaderLoaded(false) {
         std::cout << "Initializing TimeWallpaper..." << std::endl;
 
         loadConfig();
@@ -109,6 +111,23 @@ public:
 
         // Load watermark
         loadWatermark();
+
+        // Load watermark inversion shader
+        if (hasWatermark && sf::Shader::isAvailable()) {
+            const std::string fragShader = R"(
+uniform sampler2D texture;
+uniform float invertAmount;
+void main() {
+    vec4 pixel = texture2D(texture, gl_TexCoord[0].xy);
+    vec4 inverted = vec4(1.0 - pixel.r, 1.0 - pixel.g, 1.0 - pixel.b, pixel.a);
+    gl_FragColor = gl_Color * mix(pixel, inverted, invertAmount);
+}
+)";
+            watermarkShaderLoaded = watermarkShader.loadFromMemory(fragShader, sf::Shader::Fragment);
+            if (!watermarkShaderLoaded) {
+                std::cout << "Warning: Watermark inversion shader failed to compile" << std::endl;
+            }
+        }
 
         // Enumerate all monitors
         EnumDisplayMonitors(NULL, NULL, MonitorEnumProc, reinterpret_cast<LPARAM>(&monitors));
@@ -793,9 +812,6 @@ public:
             logMessage("  Solar Noon: " + formatHour(todaysSolarTimes.solar_noon_hour));
             logMessage("  Sunset: " + formatHour(todaysSolarTimes.sunset_hour));
             logMessage("  Civil Twilight End: " + formatHour(todaysSolarTimes.civil_twilight_end));
-            
-            // Generate CSV file with RGB values for each minute of the day
-            generateDebugCSV();
         }
     }
     
@@ -866,23 +882,23 @@ public:
         std::vector<ColorPoint> points;
         
         // Night and early morning
-        points.push_back({0.0, Color(8, 8, 25), "Deep Night"});
-        points.push_back({std::max(1.0, sunrise - 3.0), Color(10, 10, 25), "Pre-Dawn"});
-        points.push_back({std::max(2.0, sunrise - 1.5), Color(15, 15, 45), "Early Dawn"});
-        points.push_back({std::max(3.0, sunrise - 1.0), Color(25, 15, 65), "Early Dawn"});
-        points.push_back({std::max(4.0, sunrise - 0.5), Color(50, 30, 65), "Dawn"});
-        points.push_back({std::max(5.0, sunrise - 0.25), Color(120, 80, 110), "Dawn"});
+        points.push_back({0.0, Color(7, 8, 26), "Deep Night"});
+        points.push_back({std::max(1.0, sunrise - 3.0), Color(8, 9, 27), "Pre-Dawn"});
+        points.push_back({std::max(2.0, sunrise - 1.5), Color(18, 21, 53), "Early Dawn"});
+        points.push_back({std::max(3.0, sunrise - 1.0), Color(25, 26, 65), "Early Dawn"});
+        points.push_back({std::max(4.0, sunrise - 0.5), Color(50, 54, 75), "Dawn"});
+        points.push_back({std::max(5.0, sunrise - 0.25), Color(65, 68, 100), "Dawn"});
         
         // Sunrise and morning
-        points.push_back({std::max(6.0, sunrise), Color(160, 120, 130), "Sunrise"});
-        points.push_back({std::max(7.0, sunrise + 0.25), Color(190, 150, 140), "Sunrise"});
-        points.push_back({std::max(8.0, sunrise + 0.5), Color(210, 180, 160), "Early Morning"});
-        points.push_back({std::max(9.0, sunrise + 1.0), Color(220, 200, 180), "Early Morning"});
-        points.push_back({std::max(10.0, sunrise + 2.0), Color(230, 240, 220), "Morning"});
+        points.push_back({std::max(6.0, sunrise), Color(210, 120, 70), "Sunrise"});
+        points.push_back({std::max(7.0, sunrise + 0.25), Color(200, 210, 150), "Sunrise"});
+        points.push_back({std::max(8.0, sunrise + 0.5), Color(190, 210, 200), "Early Morning"});
+        points.push_back({std::max(9.0, sunrise + 1.0), Color(180, 210, 210), "Early Morning"});
+        points.push_back({std::max(10.0, sunrise + 2.0), Color(175, 210, 220), "Morning"});
         
         // Day time
-        points.push_back({std::max(11.0, solar_noon - 1.5), Color(210, 230, 200), "Late Morning"});
-        points.push_back({std::max(11.5, solar_noon - 1.0), Color(190, 220, 190), "Late Morning"});
+        points.push_back({std::max(11.0, solar_noon - 1.5), Color(170, 210, 230), "Late Morning"});
+        points.push_back({std::max(11.5, solar_noon - 1.0), Color(170, 210, 230), "Late Morning"});
         points.push_back({std::max(12.0, solar_noon), Color(170, 210, 230), "Noon"});
         points.push_back({std::max(13.0, solar_noon + 1.0), Color(170, 210, 230), "Early Afternoon"});
         points.push_back({std::max(14.0, solar_noon + 1.5), Color(170, 210, 230), "Early Afternoon"});
@@ -911,24 +927,24 @@ public:
         points.push_back({post_sunset_1, Color(210, 120, 70), "Sunset"});
         points.push_back({post_sunset_2, Color(170, 100, 75), "Post-Sunset"});
         points.push_back({post_sunset_3, Color(140, 90, 80), "Post-Sunset"});
-        points.push_back({twilight_1, Color(110, 80, 85), "Civil Twilight"});
-        points.push_back({twilight_2, Color(95, 75, 95), "Civil Twilight"});
-        points.push_back({twilight_3, Color(80, 65, 85), "Civil Twilight"});
+        points.push_back({twilight_1, Color(105, 80, 95), "Civil Twilight"});
+        points.push_back({twilight_2, Color(55, 70, 101), "Civil Twilight"});
+        points.push_back({twilight_3, Color(45, 58, 89), "Civil Twilight"});
         
         // Evening progression - based on twilight end
         double evening_start = twilight_3 + 0.1;
-        points.push_back({evening_start, Color(65, 60, 75), "Evening"});
-        points.push_back({evening_start + 0.25, Color(65, 55, 70), "Evening"});
-        points.push_back({evening_start + 0.5, Color(60, 50, 70), "Evening"});
-        points.push_back({evening_start + 0.75, Color(50, 45, 65), "Evening"});
-        points.push_back({evening_start + 1.0, Color(45, 40, 65), "Evening"});
-        points.push_back({evening_start + 1.25, Color(40, 35, 60), "Evening"});
-        points.push_back({evening_start + 1.5, Color(35, 30, 55), "Evening"});
-        points.push_back({evening_start + 1.75, Color(32, 28, 52), "Late Evening"});
-        points.push_back({evening_start + 2.25, Color(32, 22, 48), "Late Evening"});
-        points.push_back({evening_start + 2.75, Color(22, 17, 42), "Late Evening"});
-        points.push_back({evening_start + 3.25, Color(15, 12, 35), "Night"});
-        points.push_back({23.99, Color(8, 8, 20), "Night"});
+        points.push_back({evening_start, Color(40, 43, 70), "Evening"});
+        points.push_back({evening_start + 0.25, Color(26, 33, 60), "Evening"});
+        points.push_back({evening_start + 0.5, Color(22, 25, 57), "Evening"});
+        points.push_back({evening_start + 0.75, Color(18, 21, 53), "Evening"});
+        points.push_back({evening_start + 1.0, Color(13, 15, 43), "Evening"});
+        points.push_back({evening_start + 1.25, Color(12, 14, 39), "Evening"});
+        points.push_back({evening_start + 1.5, Color(11, 12, 35), "Evening"});
+        points.push_back({evening_start + 1.75, Color(10, 11, 31), "Late Evening"});
+        points.push_back({evening_start + 2.25, Color(9, 10, 28), "Late Evening"});
+        points.push_back({evening_start + 2.75, Color(8, 9, 27), "Late Evening"});
+        points.push_back({evening_start + 3.25, Color(7, 8, 26), "Night"});
+        points.push_back({23.99, Color(7, 8, 26), "Night"});
         
         // Fix times outside 0-24 range
         for (auto& point : points) {
@@ -1040,16 +1056,92 @@ public:
         }
     }
 
+    float computeWatermarkInvertProgress() {
+        double sunrise = todaysSolarTimes.sunrise_hour;
+        double sunset  = todaysSolarTimes.sunset_hour;
+
+        const double transitionHours = 3.0 / 60.0; // 3 minutes
+        const double offsetHours     = 1.5;         // 90 minutes
+
+        double invertStart = sunset + offsetHours;
+        double invertFull  = invertStart + transitionHours;
+        double revertFull  = sunrise - offsetHours;
+        double revertStart = revertFull - transitionHours;
+
+        time_t now = time(0);
+        tm* ti = localtime(&now);
+        double h = ti->tm_hour + ti->tm_min / 60.0 + ti->tm_sec / 3600.0;
+
+        // Transitioning to inverted (evening, shortly after sunset+90min)
+        if (h >= invertStart && h < invertFull) {
+            return (float)((h - invertStart) / transitionHours);
+        }
+        // Fully inverted — wraps midnight: after invertFull in the evening OR before revertStart in the morning
+        if (h >= invertFull || h < revertStart) {
+            return 1.0f;
+        }
+        // Transitioning back to normal (early morning, before sunrise-90min)
+        if (h >= revertStart && h < revertFull) {
+            return (float)(1.0 - (h - revertStart) / transitionHours);
+        }
+        // Daytime — normal
+        return 0.0f;
+    }
+
+    void renderDebugStrip() {
+        float invertProgress = computeWatermarkInvertProgress();
+        for (auto& m : monitors) {
+            if (m.window && m.window->isOpen()) {
+                const int stripHeight = 300;
+                const int stripY = (m.height - stripHeight) / 2;
+
+                sf::Image stripImage;
+                stripImage.create(m.width, m.height, sf::Color(10, 10, 20));
+
+                for (int x = 0; x < m.width; x++) {
+                    double hour = (static_cast<double>(x) / m.width) * 24.0;
+                    Color c = getColorForHour(hour);
+                    sf::Color px(c.r, c.g, c.b);
+
+                    int yEnd = std::min(stripY + stripHeight, m.height);
+                    for (int y = stripY; y < yEnd; y++) {
+                        stripImage.setPixel(x, y, px);
+                    }
+                }
+
+                sf::Texture stripTexture;
+                stripTexture.loadFromImage(stripImage);
+                sf::Sprite stripSprite(stripTexture);
+
+                m.window->clear(sf::Color(10, 10, 20));
+                m.window->draw(stripSprite);
+                if (hasWatermark) {
+                    if (watermarkShaderLoaded) {
+                        watermarkShader.setUniform("texture", sf::Shader::CurrentTexture);
+                        watermarkShader.setUniform("invertAmount", invertProgress);
+                        m.window->draw(m.watermarkSprite, &watermarkShader);
+                    } else {
+                        m.window->draw(m.watermarkSprite);
+                    }
+                }
+                m.window->display();
+            }
+        }
+    }
+
     void renderFrame(const Color& bgColor) {
-        // Get current time and calculate future time (1 hour ahead)
+        if (config.debug_mode) {
+            renderDebugStrip();
+            return;
+        }
+
+        float invertProgress = computeWatermarkInvertProgress();
+
+        // Get current time and calculate future time (15 minutes ahead)
         time_t now = time(0);
         tm* timeinfo = localtime(&now);
         double currentHour = timeinfo->tm_hour + (timeinfo->tm_min / 60.0) + (timeinfo->tm_sec / 3600.0);
-        double futureHour = currentHour + 1.0;
-
-        // Get colors for current and future times
-        Color bottomColor = bgColor; // Current color (already calculated)
-        Color topColor = getColorForHour(futureHour);
+        double timeSpan = 0.25; // 15 minutes = 0.25 hours
 
         // 8x8 Bayer matrix for ordered dithering
         static const int bayerMatrix[8][8] = {
@@ -1074,19 +1166,26 @@ public:
                     // Calculate vertical progress (0.0 at bottom, 1.0 at top)
                     double verticalProgress = 1.0 - (static_cast<double>(y) / m.height);
 
-                    // Interpolate base color at this row
-                    Color baseColor = interpolateColor(bottomColor, topColor, 1.0 - verticalProgress);
+                    // Calculate the time at this vertical position (linearly interpolate from current to future time)
+                    double timeAtThisRow = currentHour + (verticalProgress * timeSpan); // verticalProgress goes from 0 (bottom/future) to 1 (top/current)
+
+                    // Get the actual color for this specific time from the precalculated color schedule
+                    Color baseColor = getColorForHour(timeAtThisRow);
+
+                    // Get adjacent color for dithering calculation
+                    double nextRowTime = currentHour + ((verticalProgress + (1.0 / m.height)) * timeSpan);
+                    Color nextColor = getColorForHour(nextRowTime);
 
                     for (int x = 0; x < m.width; x++) {
                         // Get dither threshold from Bayer matrix (0-63)
                         int bayerValue = bayerMatrix[y % 8][x % 8];
                         double threshold = (bayerValue / 64.0) - 0.5; // Range: -0.5 to ~0.5
 
-                        // Apply dithering: add threshold scaled by color difference
+                        // Apply dithering: add threshold scaled by color difference between adjacent rows
                         Color colorDiff;
-                        colorDiff.r = topColor.r - bottomColor.r;
-                        colorDiff.g = topColor.g - bottomColor.g;
-                        colorDiff.b = topColor.b - bottomColor.b;
+                        colorDiff.r = nextColor.r - baseColor.r;
+                        colorDiff.g = nextColor.g - baseColor.g;
+                        colorDiff.b = nextColor.b - baseColor.b;
 
                         int r = std::max(0, std::min(255, baseColor.r + static_cast<int>(threshold * abs(colorDiff.r) * 0.5)));
                         int g = std::max(0, std::min(255, baseColor.g + static_cast<int>(threshold * abs(colorDiff.g) * 0.5)));
@@ -1106,7 +1205,13 @@ public:
 
                 // Draw watermark if available
                 if (hasWatermark) {
-                    m.window->draw(m.watermarkSprite);
+                    if (watermarkShaderLoaded) {
+                        watermarkShader.setUniform("texture", sf::Shader::CurrentTexture);
+                        watermarkShader.setUniform("invertAmount", invertProgress);
+                        m.window->draw(m.watermarkSprite, &watermarkShader);
+                    } else {
+                        m.window->draw(m.watermarkSprite);
+                    }
                 }
 
                 m.window->display();

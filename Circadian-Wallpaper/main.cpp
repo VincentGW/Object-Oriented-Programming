@@ -50,7 +50,7 @@ struct Config {
     bool auto_detect_location = true;
 };
 
-class TimeWallpaper {
+class CircadianWallpaper {
 private:
     struct MonitorWindow {
         std::unique_ptr<sf::RenderWindow> window;
@@ -97,8 +97,8 @@ private:
     }
 
 public:
-    TimeWallpaper() : hasWatermark(false), lastAccentColorUpdate(0), watermarkShaderLoaded(false) {
-        std::cout << "Initializing TimeWallpaper..." << std::endl;
+    CircadianWallpaper() : hasWatermark(false), lastAccentColorUpdate(0), watermarkShaderLoaded(false) {
+        std::cout << "Initializing CircadianWallpaper..." << std::endl;
 
         loadConfig();
 
@@ -144,7 +144,7 @@ void main() {
             // Create window for this monitor
             m.window = std::make_unique<sf::RenderWindow>(
                 sf::VideoMode(m.width, m.height),
-                "TimeWallpaper",
+                "CircadianWallpaper",
                 sf::Style::None
             );
             m.window->setFramerateLimit(60);
@@ -171,14 +171,14 @@ void main() {
             }
         }
 
-        std::cout << "\n=== TimeWallpaper v3.0 - SFML Edition ===" << std::endl;
+        std::cout << "\n=== CircadianWallpaper v3.0 - SFML Edition ===" << std::endl;
         std::cout << "=================================================" << std::endl;
         std::cout << "Location: " << config.location_name << " (" << config.latitude << ", " << config.longitude << ")" << std::endl;
         std::cout << "Update interval: " << config.update_interval_minutes << " minute(s)" << std::endl;
         std::cout << "Monitors: " << monitors.size() << std::endl;
         std::cout << "Solar cache: " << getSolarCachePath() << " (8-day storage)" << std::endl;
 
-        logMessage("TimeWallpaper v3.0 - SFML Edition (8-Day Cache)");
+        logMessage("CircadianWallpaper v3.0 - SFML Edition (8-Day Cache)");
         logMessage("=================================================");
         logMessage("Location: " + config.location_name + " (" + std::to_string(config.latitude) + ", " + std::to_string(config.longitude) + ")");
         logMessage("Update interval: " + std::to_string(config.update_interval_minutes) + " minute(s)");
@@ -186,7 +186,7 @@ void main() {
         logMessage("Solar cache: " + getSolarCachePath() + " (8-day storage)");
     }
 
-    ~TimeWallpaper() {
+    ~CircadianWallpaper() {
         for (auto& m : monitors) {
             if (m.window && m.window->isOpen()) {
                 m.window->close();
@@ -309,7 +309,7 @@ void main() {
         std::string configPath = getConfigPath();
         std::ofstream configFile(configPath);
         if (configFile.is_open()) {
-            configFile << "# TimeWallpaper Configuration" << std::endl;
+            configFile << "# CircadianWallpaper Configuration" << std::endl;
             configFile << "# auto_detect_location=true: Automatically detect your location via IP geolocation" << std::endl;
             configFile << "# auto_detect_location=false: Use manual coordinates below as primary location" << std::endl;
             configFile << "# Manual coordinates also serve as backup if auto-detection fails" << std::endl;
@@ -327,7 +327,7 @@ void main() {
     }
     
     std::string httpGetWithTimeout(const std::string& url, int timeoutMs = 5000) {
-        HINTERNET hInternet = InternetOpenA("TimeWallpaper/2.0", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0);
+        HINTERNET hInternet = InternetOpenA("CircadianWallpaper/2.0", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0);
         if (!hInternet) return "";
         
         // Set timeouts
@@ -456,7 +456,7 @@ void main() {
         std::string configPath = getConfigPath();
         std::ofstream configFile(configPath);
         if (configFile.is_open()) {
-            configFile << "# TimeWallpaper Configuration" << std::endl;
+            configFile << "# CircadianWallpaper Configuration" << std::endl;
             configFile << "# Location auto-detected successfully!" << std::endl;
             configFile << "# Set auto_detect_location=false to use manual coordinates as primary location." << std::endl;
             configFile << "# Manual coordinates below serve as backup if auto-detection fails." << std::endl;
@@ -727,7 +727,7 @@ void main() {
             return;
         }
 
-        cacheFile << "# TimeWallpaper Solar Cache - Eight Day Data (Today + Next 7 Days)" << std::endl;
+        cacheFile << "# CircadianWallpaper Solar Cache - Eight Day Data (Today + Next 7 Days)" << std::endl;
         cacheFile << "last_updated=" << solarCache.last_updated << std::endl;
         cacheFile << std::endl;
 
@@ -924,10 +924,10 @@ void main() {
         double twilight_2 = twilight_1 + 0.1;
         double twilight_3 = twilight_2 + 0.1;
         
-        points.push_back({post_sunset_1, Color(210, 120, 70), "Sunset"});
-        points.push_back({post_sunset_2, Color(170, 100, 75), "Post-Sunset"});
-        points.push_back({post_sunset_3, Color(140, 90, 80), "Post-Sunset"});
-        points.push_back({twilight_1, Color(105, 80, 95), "Civil Twilight"});
+        points.push_back({post_sunset_1, Color(200, 120, 70), "Sunset"});
+        points.push_back({post_sunset_2, Color(145, 100, 80), "Post-Sunset"});
+        points.push_back({post_sunset_3, Color(110, 90, 87), "Post-Sunset"});
+        points.push_back({twilight_1, Color(85, 80, 95), "Civil Twilight"});
         points.push_back({twilight_2, Color(55, 70, 101), "Civil Twilight"});
         points.push_back({twilight_3, Color(45, 58, 89), "Civil Twilight"});
         
@@ -1060,8 +1060,8 @@ void main() {
         double sunrise = todaysSolarTimes.sunrise_hour;
         double sunset  = todaysSolarTimes.sunset_hour;
 
-        const double transitionHours = 3.0 / 60.0; // 3 minutes
-        const double offsetHours     = 1.5;         // 90 minutes
+        const double transitionHours = 2.0 / 60.0; // 2 minutes transition time for smooth fade
+        const double offsetHours     = 1;         // 60 minutes after sunset
 
         double invertStart = sunset + offsetHours;
         double invertFull  = invertStart + transitionHours;
@@ -1229,10 +1229,10 @@ void main() {
         WNDCLASSA wc = {0};
         wc.lpfnWndProc = PowerEventWndProc;
         wc.hInstance = GetModuleHandle(NULL);
-        wc.lpszClassName = "TimeWallpaperPowerWindow";
+        wc.lpszClassName = "CircadianWallpaperPowerWindow";
         RegisterClassA(&wc);
         
-        g_hWnd = CreateWindowA("TimeWallpaperPowerWindow", "TimeWallpaper Power", 
+        g_hWnd = CreateWindowA("CircadianWallpaperPowerWindow", "CircadianWallpaper Power", 
                               0, 0, 0, 0, 0, HWND_MESSAGE, NULL, GetModuleHandle(NULL), this);
     }
 
@@ -1240,8 +1240,8 @@ void main() {
         if (uMsg == WM_POWERBROADCAST) {
             if (wParam == PBT_APMRESUMEAUTOMATIC || wParam == PBT_APMRESUMESUSPEND) {
                 g_justWokeUp = true;
-                // Get the TimeWallpaper instance from window data
-                TimeWallpaper* instance = (TimeWallpaper*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+                // Get the CircadianWallpaper instance from window data
+                CircadianWallpaper* instance = (CircadianWallpaper*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
                 if (instance) {
                     instance->logMessage("System resumed from sleep - updating wallpaper immediately");
                 }
@@ -1251,11 +1251,11 @@ void main() {
     }
 
     void run() {
-        std::cout << "\nStarting TimeWallpaper..." << std::endl;
+        std::cout << "\nStarting CircadianWallpaper..." << std::endl;
         std::cout << "Display will update every 15 seconds for smooth color transitions" << std::endl;
         std::cout << "Use Task Manager to terminate the application" << std::endl << std::endl;
 
-        logMessage("Starting TimeWallpaper...");
+        logMessage("Starting CircadianWallpaper...");
         logMessage("Display will update every 15 seconds for smooth color transitions");
 
         // Create hidden window for power management messages
@@ -1419,14 +1419,14 @@ int main(int argc, char* argv[]) {
     // Set DPI awareness to prevent scaling issues on high-DPI displays
     SetProcessDPIAware();
 
-    TimeWallpaper app;
+    CircadianWallpaper app;
     
     if (argc > 1) {
         std::string mode = argv[1];
         if (mode == "--help" || mode == "-h") {
             std::cout << "\nUsage:" << std::endl;
-            std::cout << "  TimeWallpaper.exe              - Run fullscreen color overlay based on solar position" << std::endl;
-            std::cout << "  TimeWallpaper.exe --help       - Show this help" << std::endl;
+            std::cout << "  CircadianWallpaper.exe              - Run fullscreen color overlay based on solar position" << std::endl;
+            std::cout << "  CircadianWallpaper.exe --help       - Show this help" << std::endl;
             std::cout << "\nFeatures:" << std::endl;
             std::cout << "  • Fullscreen SFML overlay (fast, no wallpaper API calls)" << std::endl;
             std::cout << "  • Automatic location detection via IP geolocation" << std::endl;

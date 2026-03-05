@@ -1,3 +1,7 @@
+# Circadian Wallpaper
+
+Circadian Wallpaper automatically changes your desktop wallpaper based on real astronomical data at your location.
+
 # GNU Plugin
 
 A plugin for an popular open-source alternative to Photoshop that neatly displays a palette of recently used colors.
@@ -5,10 +9,6 @@ A plugin for an popular open-source alternative to Photoshop that neatly display
 # Parallax Scroller
 
 A parallax scrolling visualizer designed to showcase scenery made of pixel art.
-
-# TimeWallpaper
-
-TimeWallpaper automatically changes your desktop wallpaper based on real astronomical data at your location.
 
 # Treasure Hunt Simulator
 

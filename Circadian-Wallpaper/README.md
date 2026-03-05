@@ -37,5 +37,5 @@ Colors change based on your location's actual solar times:
 
 Edit `config.ini` to customize:
 
-- Disable/enable auto-detection to use manual backup coordinates
-- Enable debug output (shows you what the day's colors will look like in a two dimensional strip)
+- Disable auto-detection to use manual backup coordinates
+- Enable debug mode (shows you what the day's colors will look like in a two dimensional strip)
